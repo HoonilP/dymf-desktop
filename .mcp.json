@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "gsd-workflow": {
+      "command": "/opt/homebrew/Cellar/node@24/24.15.0/bin/node",
+      "args": [
+        "/Users/hipark/.local/lib/node_modules/gsd-pi/packages/mcp-server/dist/cli.js"
+      ],
+      "cwd": "/Users/hipark/dev/work/dymf-desktop",
+      "env": {
+        "GSD_CLI_PATH": "/Users/hipark/.local/bin/gsd",
+        "GSD_WORKFLOW_EXECUTORS_MODULE": "/Users/hipark/.gsd/agent/extensions/gsd/tools/workflow-tool-executors.js",
+        "GSD_WORKFLOW_WRITE_GATE_MODULE": "/Users/hipark/.gsd/agent/extensions/gsd/bootstrap/write-gate.js",
+        "GSD_PERSIST_WRITE_GATE_STATE": "1",
+        "GSD_WORKFLOW_PROJECT_ROOT": "/Users/hipark/dev/work/dymf-desktop"
+      }
+    }
+  }
+}
