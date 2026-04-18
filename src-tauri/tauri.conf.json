@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicorevin/tauri/refs/heads/v2/tooling/cli/schema.json",
+  "productName": "DYMF Desktop",
+  "version": "0.1.0",
+  "identifier": "com.dymf.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "DYMF Desktop",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/64x64.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "copyright": "© 2026 DYMF. All rights reserved.",
+    "shortDescription": "DYMF Desktop - 개인 금융 관리 데스크탑 애플리케이션",
+    "category": "public.app-category.finance",
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English", "Korean"]
+      }
+    }
+  }
+}
