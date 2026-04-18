@@ -671,6 +671,11 @@ async function migrateLoanOfficier(pgClient, db) {
 }
 
 async function migrateLoanOfficierCpNumbers(pgClient, db) {
+  // Debug: verify actual row counts in SQLite before inserting join rows
+  const loCount = db.prepare('SELECT COUNT(*) as cnt FROM loan_officier').get();
+  const cpCount = db.prepare('SELECT COUNT(*) as cnt FROM cp_number').get();
+  console.log(`[debug] SQLite loan_officier: ${loCount.cnt} rows, cp_number: ${cpCount.cnt} rows`);
+
   const joinTable = PG_TABLES.loan_officier_cp_numbers;
   const { rows } = await pgClient.query(`SELECT * FROM "${joinTable}"`);
   const stmt = db.prepare(`
@@ -684,6 +689,13 @@ async function migrateLoanOfficierCpNumbers(pgClient, db) {
     const cpNumberId = r.cpNumberId ?? r.cp_number_id ?? r.cpNumberIdId;
     if (loanOfficierId == null || cpNumberId == null) {
       console.error(`  [loan_officier_cp_numbers] WARNING: null FK values in join row, skipping`);
+      continue;
+    }
+    // Debug: check FK existence before insert
+    const loExists = db.prepare('SELECT id FROM loan_officier WHERE id = ?').get(loanOfficierId);
+    const cpExists = db.prepare('SELECT id FROM cp_number WHERE id = ?').get(cpNumberId);
+    if (!loExists || !cpExists) {
+      console.error(`  [loan_officier_cp_numbers] FK missing: loan_officier(${loanOfficierId})=${loExists ? 'ok' : 'MISSING'}, cp_number(${cpNumberId})=${cpExists ? 'ok' : 'MISSING'}`);
       continue;
     }
     stmt.run(loanOfficierId, cpNumberId);
