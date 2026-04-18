@@ -519,6 +519,8 @@ async function main() {
 
 // ─── Per-Table Migration Functions ─────────────────────────────────────
 
+const NOW = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
 async function migrateUser(pgClient, db) {
   const { rows } = await pgClient.query('SELECT * FROM "user"');
   const stmt = db.prepare(`
@@ -533,16 +535,17 @@ async function migrateUser(pgClient, db) {
       continue;
     }
     seen.add(r.user_name);
-    stmt.run(
+    const result = stmt.run(
       r.id,
-      r.user_name,
-      r.password,
+      r.user_name ?? `user_${r.id}`,
+      r.password ?? '',
       convertEnum(r.role, ENUM_ROLE, 'paidUser'),
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
-    count++;
+    if (result.changes > 0) count++;
+    else console.error(`  [user] WARNING: INSERT OR IGNORE skipped id=${r.id}`);
   }
   console.log(`[user] migrated: ${count} rows`);
 }
@@ -556,19 +559,20 @@ async function migratePersonal(pgClient, db) {
   const seen = new Set();
   let count = 0;
   for (const r of rows) {
-    if (seen.has(r.nrc_number)) {
-      console.error(`  [personal] WARNING: duplicate nrc_number "${r.nrc_number}", skipping`);
+    const nrc = r.nrc_number ?? `personal_${r.id}`;
+    if (seen.has(nrc)) {
+      console.error(`  [personal] WARNING: duplicate nrc_number "${nrc}", skipping`);
       continue;
     }
-    seen.add(r.nrc_number);
-    stmt.run(
+    seen.add(nrc);
+    const result = stmt.run(
       r.id,
-      r.name,
-      r.nrc_number,
-      convertDateOnly(r.birth),
-      r.phone_number,
-      r.address,
-      r.email,
+      r.name ?? '',
+      nrc,
+      convertDateOnly(r.birth) ?? '1900-01-01',
+      r.phone_number ?? '',
+      r.address ?? '',
+      r.email ?? '',
       convertEnum(r.gender, ENUM_GENDER, 'notdefinded'),
       convertBigint(r.salary),
       convertBigint(r.ssb),
@@ -576,11 +580,12 @@ async function migratePersonal(pgClient, db) {
       convertBigint(r.bonus),
       convertEnum(r.working_status, ENUM_WORKING_STATUS, 'etc'),
       r.image ?? 'empty',
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
-    count++;
+    if (result.changes > 0) count++;
+    else console.error(`  [personal] WARNING: INSERT OR IGNORE skipped id=${r.id}`);
   }
   console.log(`[personal] migrated: ${count} rows`);
 }
@@ -594,20 +599,22 @@ async function migrateCpNumber(pgClient, db) {
   const seen = new Set();
   let count = 0;
   for (const r of rows) {
-    if (seen.has(r.area_number)) {
-      console.error(`  [cp_number] WARNING: duplicate area_number "${r.area_number}", skipping`);
+    const areaNum = r.area_number ?? `area_${r.id}`;
+    if (seen.has(areaNum)) {
+      console.error(`  [cp_number] WARNING: duplicate area_number "${areaNum}", skipping`);
       continue;
     }
-    seen.add(r.area_number);
-    stmt.run(
+    seen.add(areaNum);
+    const result = stmt.run(
       r.id,
-      r.area_number,
-      r.description,
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      areaNum,
+      r.description ?? '',
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
-    count++;
+    if (result.changes > 0) count++;
+    else console.error(`  [cp_number] WARNING: INSERT OR IGNORE skipped id=${r.id}`);
   }
   console.log(`[cp_number] migrated: ${count} rows`);
 }
@@ -629,13 +636,13 @@ async function migrateFixedasset(pgClient, db) {
     stmt.run(
       r.id,
       r.name,
-      convertDateOnly(r.purchase_date),
+      convertDateOnly(r.purchase_date) ?? '1900-01-01',
       convertBigint(r.price),
       convertBool(r.method_status),
       r.depreciation_period ?? 0,
       convertDecimal(r.depreciation_ratio),
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
     count++;
@@ -658,14 +665,15 @@ async function migrateLoanOfficier(pgClient, db) {
       continue;
     }
     seen.add(personnelId);
-    stmt.run(
+    const result = stmt.run(
       r.id,
       personnelId,
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
-    count++;
+    if (result.changes > 0) count++;
+    else console.error(`  [loan_officier] WARNING: INSERT OR IGNORE skipped id=${r.id} (FK to personal(${personnelId}) may be missing)`);
   }
   console.log(`[loan_officier] migrated: ${count} rows`);
 }
@@ -713,34 +721,36 @@ async function migrateCustomer(pgClient, db) {
   const seen = new Set();
   let count = 0;
   for (const r of rows) {
-    if (seen.has(r.nrc_number)) {
-      console.error(`  [customer] WARNING: duplicate nrc_number "${r.nrc_number}", skipping`);
+    const nrc = r.nrc_number ?? `customer_${r.id}`;
+    if (seen.has(nrc)) {
+      console.error(`  [customer] WARNING: duplicate nrc_number "${nrc}", skipping`);
       continue;
     }
-    seen.add(r.nrc_number);
-    stmt.run(
+    seen.add(nrc);
+    const result = stmt.run(
       r.id,
-      r.name,
-      r.nrc_number,
-      r.father_name,
+      r.name ?? '',
+      nrc,
+      r.father_name ?? '',
       convertArray(r.family_information),
-      convertDateOnly(r.birth),
-      r.phone_number,
-      r.home_address,
+      convertDateOnly(r.birth) ?? '1900-01-01',
+      r.phone_number ?? '',
+      r.home_address ?? '',
       r.email ?? null,
       convertEnum(r.gender, ENUM_GENDER, 'notdefinded'),
       convertEnum(r.loan_type, ENUM_LOAN_TYPE, 'etc'),
-      r.home_postal_code,
-      r.office_address,
-      r.office_postal_code,
+      r.home_postal_code ?? '',
+      r.office_address ?? '',
+      r.office_postal_code ?? '',
       convertArray(r.details),
       r.image ?? 'empty',
       r.cpNumberId,
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
-    count++;
+    if (result.changes > 0) count++;
+    else console.error(`  [customer] WARNING: INSERT OR IGNORE skipped id=${r.id}`);
   }
   console.log(`[customer] migrated: ${count} rows`);
 }
@@ -754,33 +764,35 @@ async function migrateGuarantor(pgClient, db) {
   const seen = new Set();
   let count = 0;
   for (const r of rows) {
-    if (seen.has(r.nrc_number)) {
-      console.error(`  [guarantor] WARNING: duplicate nrc_number "${r.nrc_number}", skipping`);
+    const nrc = r.nrc_number ?? `guarantor_${r.id}`;
+    if (seen.has(nrc)) {
+      console.error(`  [guarantor] WARNING: duplicate nrc_number "${nrc}", skipping`);
       continue;
     }
-    seen.add(r.nrc_number);
-    stmt.run(
+    seen.add(nrc);
+    const result = stmt.run(
       r.id,
-      r.name,
-      r.nrc_number,
-      convertDateOnly(r.birth),
-      r.father_name,
+      r.name ?? '',
+      nrc,
+      convertDateOnly(r.birth) ?? '1900-01-01',
+      r.father_name ?? '',
       convertEnum(r.gender, ENUM_GENDER, 'notdefinded'),
-      r.phone_number,
+      r.phone_number ?? '',
       r.email ?? null,
       convertEnum(r.loan_type, ENUM_LOAN_TYPE, 'etc'),
-      r.home_address,
-      r.home_postal_code,
-      r.office_address,
-      r.office_postal_code,
+      r.home_address ?? '',
+      r.home_postal_code ?? '',
+      r.office_address ?? '',
+      r.office_postal_code ?? '',
       convertArray(r.details),
       r.image ?? 'empty',
       r.cpNumberId,
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
-    count++;
+    if (result.changes > 0) count++;
+    else console.error(`  [guarantor] WARNING: INSERT OR IGNORE skipped id=${r.id}`);
   }
   console.log(`[guarantor] migrated: ${count} rows`);
 }
@@ -797,17 +809,17 @@ async function migrateLoan(pgClient, db) {
       r.id,
       r.loanOfficerId,
       convertBigint(r.loan_amount),
-      r.repayment_cycle,
+      r.repayment_cycle ?? 0,
       convertDecimal(r.interest_rate),
-      convertDateOnly(r.contract_date),
-      r.number_of_repayment,
+      convertDateOnly(r.contract_date) ?? '1900-01-01',
+      r.number_of_repayment ?? 0,
       convertEnum(r.repayment_method, ENUM_REPAYMENT_METHOD, 'Equal'),
       convertBool(r.overdue_status),
       convertBool(r.complete_status),
       r.customerId,
       convertArray(r.consulting_info),
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
     count++;
@@ -827,14 +839,14 @@ async function migrateLoanSchedule(pgClient, db) {
       r.id,
       convertBigint(r.principal),
       convertBigint(r.interest),
-      convertDateOnly(r.payment_date),
-      r.period,
+      convertDateOnly(r.payment_date) ?? '1900-01-01',
+      r.period ?? 0,
       convertBigint(r.remaining_balance),
       convertBigint(r.total),
       convertBool(r.loan_payment_status),
       r.loanId ?? null,
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
     count++;
@@ -856,8 +868,8 @@ async function migrateLoanTransaction(pgClient, db) {
       convertBigint(r.repayment_amount),
       r.loanId,
       convertBool(r.is_overdue),
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
     count++;
@@ -876,12 +888,12 @@ async function migrateCollateral(pgClient, db) {
     stmt.run(
       r.id,
       convertEnum(r.type, ENUM_COLLATERAL_TYPE, 'Car'),
-      r.name,
-      r.detail,
+      r.name ?? '',
+      r.detail ?? '',
       r.price != null ? convertBigint(r.price) : null,
       r.loanId ?? null,
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
     count++;
@@ -901,8 +913,8 @@ async function migrateGuarantee(pgClient, db) {
       r.id,
       r.loanId ?? null,
       r.guarantorId,
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
     count++;
@@ -923,10 +935,10 @@ async function migrateOverdueSchedule(pgClient, db) {
       convertBigint(r.principal),
       convertBigint(r.interest),
       convertBigint(r.overdue_interest),
-      convertDateOnly(r.payment_date),
+      convertDateOnly(r.payment_date) ?? '1900-01-01',
       r.loanId,
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
     count++;
@@ -948,8 +960,8 @@ async function migrateOverdueTransaction(pgClient, db) {
       convertBigint(r.received_interest),
       convertBigint(r.received_overdue_interest),
       r.overdueScheduleId,
-      convertDate(r.created_at),
-      convertDate(r.updated_at),
+      convertDate(r.created_at) ?? NOW,
+      convertDate(r.updated_at) ?? NOW,
       r.version ?? 1
     );
     count++;
